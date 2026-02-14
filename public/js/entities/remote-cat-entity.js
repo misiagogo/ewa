@@ -25,9 +25,9 @@ import CatModelGenerator from '../generators/cat-model-generator.js';
  * @param {number} [startX=0]
  * @param {number} [startY=0]
  * @param {number} [startZ=0]
- * @returns {number} Entity ID
+ * @returns {Promise<number>} Entity ID
  */
-export function createRemoteCatEntity(world, scene, THREE, config, userId, startX = 0, startY = 0, startZ = 0) {
+export async function createRemoteCatEntity(world, scene, THREE, config, userId, startX = 0, startY = 0, startZ = 0) {
     const entityId = world.createEntity();
 
     world.addComponent(entityId, new Transform(startX, startY, startZ));
@@ -35,7 +35,7 @@ export function createRemoteCatEntity(world, scene, THREE, config, userId, start
     world.addComponent(entityId, new NetworkTransform(startX, startY, startZ, 0));
 
     const catGen = new CatModelGenerator(THREE);
-    const mesh = catGen.create(config);
+    const mesh = await catGen.create(config);
     mesh.userData.userId = userId;
     scene.add(mesh);
     world.addComponent(entityId, new Renderable(mesh));

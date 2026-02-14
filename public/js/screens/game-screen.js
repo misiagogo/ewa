@@ -225,9 +225,9 @@ class GameScreen {
             this._world.addSystem(new AnimationSystem());
             this._world.addSystem(new RenderSystem());
 
-            // Encja gracza (kot)
+            // Encja gracza (kot) — async bo ładuje model GLB
             const startY = this._terrainGen ? this._terrainGen.getHeight(0, 0) + 0.3 : 2;
-            this._playerEntityId = createCatEntity(
+            this._playerEntityId = await createCatEntity(
                 this._world, this._scene, THREE,
                 this._data.catConfig || {},
                 0, startY, 0

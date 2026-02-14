@@ -3,9 +3,10 @@
  *
  * Tworzy encję z pełnym zestawem komponentów: Transform, Velocity,
  * CatConfig, Renderable, PlayerControlled.
+ * Async — ładuje model GLB z pliku.
  *
  * @example
- * const catId = createCatEntity(world, scene, THREE, { fur_color: '#ff8800', ... });
+ * const catId = await createCatEntity(world, scene, THREE, { fur_color: '#ff8800', ... });
  */
 
 import Transform from '../components/transform.js';
@@ -25,9 +26,9 @@ import CatModelGenerator from '../generators/cat-model-generator.js';
  * @param {number} [startX=0]
  * @param {number} [startY=0]
  * @param {number} [startZ=0]
- * @returns {number} Entity ID
+ * @returns {Promise<number>} Entity ID
  */
-export function createCatEntity(world, scene, THREE, config, startX = 0, startY = 0, startZ = 0) {
+export async function createCatEntity(world, scene, THREE, config, startX = 0, startY = 0, startZ = 0) {
     const entityId = world.createEntity();
 
     world.addComponent(entityId, new Transform(startX, startY, startZ));
@@ -36,7 +37,7 @@ export function createCatEntity(world, scene, THREE, config, startX = 0, startY 
     world.addComponent(entityId, new PlayerControlled(true));
 
     const catGen = new CatModelGenerator(THREE);
-    const mesh = catGen.create(config);
+    const mesh = await catGen.create(config);
     scene.add(mesh);
     world.addComponent(entityId, new Renderable(mesh));
 

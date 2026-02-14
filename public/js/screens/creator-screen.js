@@ -207,7 +207,7 @@ class CreatorScreen {
      *
      * @private
      */
-    _rebuildCatPreview() {
+    async _rebuildCatPreview() {
         if (!this._catGen || !this._previewScene) return;
 
         // Usuń stary model
@@ -216,8 +216,12 @@ class CreatorScreen {
         }
 
         const config = this._getCurrentConfig();
-        this._catModel = this._catGen.create(config);
-        this._previewScene.add(this._catModel);
+        try {
+            this._catModel = await this._catGen.create(config);
+            this._previewScene.add(this._catModel);
+        } catch (err) {
+            Debug.error('creator', 'Cat preview rebuild failed', { error: err.message });
+        }
     }
 
     /**
