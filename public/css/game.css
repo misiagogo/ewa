@@ -1,0 +1,305 @@
+/* Cat Survival — globalne style gry */
+
+/* Reset i pełnoekranowy layout */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Kontener UI (nad canvasem) */
+#app {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Elementy interaktywne w #app muszą przechwytywać kliknięcia */
+#app > * {
+    pointer-events: auto;
+}
+
+/* Canvas 3D (pod UI) */
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    display: block;
+}
+
+/* Ekran pełnoekranowy (login, menu, lobby, creator, territory) */
+.game-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1a1a2e;
+}
+
+/* Panel centralny (karty logowania, menu itp.) */
+.game-panel {
+    background-color: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Tytuł gry */
+.game-title {
+    color: #e94560;
+    text-align: center;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 8px rgba(233, 69, 96, 0.3);
+}
+
+/* Podtytuł */
+.game-subtitle {
+    color: #a0a0b0;
+    text-align: center;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Przycisk główny (akcent) */
+.btn-game {
+    background-color: #e94560;
+    border: none;
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s, transform 0.1s;
+    width: 100%;
+}
+
+.btn-game:hover {
+    background-color: #c73652;
+    transform: translateY(-1px);
+}
+
+.btn-game:active {
+    transform: translateY(0);
+}
+
+/* Przycisk drugorzędny */
+.btn-game-secondary {
+    background-color: #0f3460;
+    border: 1px solid #1a4a8a;
+    color: #e0e0e0;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+.btn-game-secondary:hover {
+    background-color: #1a4a8a;
+    color: #fff;
+}
+
+/* Input stylizowany */
+.game-input {
+    background-color: #1a1a2e;
+    border: 1px solid #0f3460;
+    color: #e0e0e0;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+}
+
+.game-input:focus {
+    background-color: #1a1a2e;
+    border-color: #e94560;
+    color: #e0e0e0;
+    box-shadow: 0 0 0 0.2rem rgba(233, 69, 96, 0.25);
+}
+
+/* Label */
+.game-label {
+    color: #a0a0b0;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Alert błędu */
+.game-error {
+    background-color: rgba(233, 69, 96, 0.15);
+    border: 1px solid #e94560;
+    color: #e94560;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+/* Alert sukcesu */
+.game-success {
+    background-color: rgba(46, 213, 115, 0.15);
+    border: 1px solid #2ed573;
+    color: #2ed573;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    text-align: center;
+}
+
+/* Link stylizowany */
+.game-link {
+    color: #e94560;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.game-link:hover {
+    color: #c73652;
+    text-decoration: underline;
+}
+
+/* Karta pokoju w lobby */
+.room-card {
+    background-color: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: border-color 0.2s;
+}
+
+.room-card:hover {
+    border-color: #e94560;
+}
+
+/* Karta terytorium */
+.territory-card {
+    background-color: #16213e;
+    border: 2px solid #0f3460;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.1s;
+}
+
+.territory-card:hover {
+    border-color: #e94560;
+    transform: translateY(-2px);
+}
+
+.territory-card.selected {
+    border-color: #e94560;
+    box-shadow: 0 0 12px rgba(233, 69, 96, 0.3);
+}
+
+/* HUD w grze (overlay) */
+.game-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.game-hud > * {
+    pointer-events: auto;
+}
+
+/* Chat w grze */
+.game-chat {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    width: 350px;
+    max-height: 200px;
+    background-color: rgba(22, 33, 62, 0.85);
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+.game-chat-messages {
+    max-height: 140px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Podgląd koloru (kreator kota) */
+.color-preview {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #0f3460;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Strefy dotykowe (mobile) */
+.touch-zone {
+    position: fixed;
+    z-index: 30;
+    pointer-events: auto;
+}
+
+.touch-zone-left {
+    left: 0;
+    bottom: 0;
+    width: 50%;
+    height: 50%;
+}
+
+.touch-zone-right {
+    right: 0;
+    bottom: 0;
+    width: 50%;
+    height: 50%;
+}
+
+/* Loading spinner */
+.game-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Scrollbar stylizowany */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a2e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #0f3460;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #1a4a8a;
+}

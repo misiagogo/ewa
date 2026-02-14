@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\RoomPlayer;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PresenceChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+/**
+ * Event: gracz dołączył do pokoju.
+ *
+ * Broadcastowany na kanale presence pokoju.
+ */
+class PlayerJoined implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    /**
+     * @param int $roomId
+     * @param int $userId
+     * @param string $userName
+     * @param array $catConfig
+     */
+    public function __construct(
+        public int $roomId,
+        public int $userId,
+        public string $userName,
+        public array $catConfig,
+    ) {}
+
+    /**
+     * @return array<int, Channel>
+     */
+    public function broadcastOn(): array
+    {
+        return [
+            new PresenceChannel('room.' . $this->roomId),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function broadcastWith(): array
+    {
+        return [
+            'user_id' => $this->userId,
+            'name' => $this->userName,
+            'cat_config' => $this->catConfig,
+        ];
+    }
+}
