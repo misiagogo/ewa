@@ -169,9 +169,9 @@ class CreatorScreen {
 
             this._previewScene = new THREE.Scene();
 
-            this._previewCamera = new THREE.PerspectiveCamera(40, width / height, 0.1, 50);
-            this._previewCamera.position.set(0, 0.6, 1.8);
-            this._previewCamera.lookAt(0, 0.35, 0);
+            this._previewCamera = new THREE.PerspectiveCamera(40, width / height, 0.01, 50);
+            this._previewCamera.position.set(0, 0.25, 0.7);
+            this._previewCamera.lookAt(0, 0.15, 0);
 
             // Oświetlenie
             const ambient = new THREE.AmbientLight(0xffffff, 0.7);
@@ -186,7 +186,7 @@ class CreatorScreen {
             this._previewScene.add(backLight);
 
             // Podłoże (okrąg)
-            const floorGeo = new THREE.CircleGeometry(0.6, 32);
+            const floorGeo = new THREE.CircleGeometry(0.3, 32);
             const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a4a, roughness: 0.9 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
@@ -194,7 +194,7 @@ class CreatorScreen {
             this._previewScene.add(floor);
 
             this._catGen = new CatModelGenerator(THREE);
-            this._rebuildCatPreview();
+            await this._rebuildCatPreview();
 
             Debug.info('creator', 'Preview initialized');
         } catch (err) {

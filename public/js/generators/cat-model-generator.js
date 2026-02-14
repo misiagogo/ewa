@@ -6,11 +6,17 @@
  * Cache'uje załadowany model — klonuje go dla każdej instancji.
  */
 
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import Debug from '../core/debug.js';
+
 /** @type {Array<string>} Dostępne wzory futra */
 export const FUR_PATTERNS = ['solid', 'striped', 'spotted', 'speckled', 'patched', 'bicolor'];
 
 /** @type {string} Ścieżka do modelu GLB */
 const CAT_MODEL_PATH = '/models/cat.glb';
+
+/** @type {number} Bazowa skala modelu GLB (kot ~0.25m wysokości w świecie gry) */
+const BASE_SCALE = 0.22;
 
 class CatModelGenerator {
     /** @type {Object} Three.js module */
@@ -43,45 +49,39 @@ class CatModelGenerator {
             return CatModelGenerator._cachedGltfScene;
         }
 
-        if (CatModelGenerator._loadPromise) {
-            return CatModelGenerator._loadPromise;
+        if (!CatModelGenerator._loadPromise) {
+            CatModelGenerator._loadPromise = this._doLoadModel();
         }
 
-        CatModelGenerator._loadPromise = new Promise((resolve, reject) => {
-            const THREE = this._THREE;
-            const loader = new THREE.GLTFLoader
-                ? new THREE.GLTFLoader()
-                : null;
+        return CatModelGenerator._loadPromise;
+    }
 
-            // GLTFLoader jest w three/addons — dynamiczny import
-            if (!loader) {
-                import('three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) => {
-                    const gltfLoader = new GLTFLoader();
-                    gltfLoader.load(
-                        CAT_MODEL_PATH,
-                        (gltf) => {
-                            CatModelGenerator._cachedGltfScene = gltf.scene;
-                            resolve(gltf.scene);
-                        },
-                        undefined,
-                        (err) => reject(err)
-                    );
-                }).catch(reject);
-                return;
-            }
+    /**
+     * Faktyczne ładowanie modelu GLB.
+     *
+     * @returns {Promise<Object>}
+     * @private
+     */
+    async _doLoadModel() {
+        Debug.info('cat-model', 'Loading model from ' + CAT_MODEL_PATH);
+        const loader = new GLTFLoader();
 
+        return new Promise((resolve, reject) => {
             loader.load(
                 CAT_MODEL_PATH,
                 (gltf) => {
+                    Debug.info('cat-model', 'Model loaded, children: ' + gltf.scene.children.length);
                     CatModelGenerator._cachedGltfScene = gltf.scene;
                     resolve(gltf.scene);
                 },
                 undefined,
-                (err) => reject(err)
+                (err) => {
+                    Debug.error('cat-model', 'GLTFLoader.load error', { error: err });
+                    CatModelGenerator._loadPromise = null;
+                    reject(err);
+                }
             );
         });
-
-        return CatModelGenerator._loadPromise;
     }
 
     /**
@@ -106,9 +106,9 @@ class CatModelGenerator {
         let catModel;
         try {
             const original = await this._loadModel();
-            catModel = original.clone();
+            catModel = this._deepClone(original);
         } catch (err) {
-            // Fallback — prosty placeholder jeśli GLB się nie załaduje
+            Debug.error('cat-model', 'GLB load failed, using fallback', { error: err?.message || err });
             catModel = this._createFallback(furColor);
         }
 
@@ -149,10 +149,10 @@ class CatModelGenerator {
         const wScaleY = 0.95 + wNorm * 0.15;
         const wScaleZ = 0.95 + wNorm * 0.15;
 
-        // Kombinacja skal
-        const sx = gScaleX * aScale * wScaleX;
-        const sy = gScaleY * aScale * wScaleY;
-        const sz = gScaleZ * aScale * wScaleZ;
+        // Kombinacja skal (BASE_SCALE zmniejsza model GLB do realistycznych proporcji)
+        const sx = BASE_SCALE * gScaleX * aScale * wScaleX;
+        const sy = BASE_SCALE * gScaleY * aScale * wScaleY;
+        const sz = BASE_SCALE * gScaleZ * aScale * wScaleZ;
 
         group.scale.set(sx, sy, sz);
         group.userData = { type: 'cat' };
@@ -223,6 +223,24 @@ class CatModelGenerator {
                 break;
             }
         }
+    }
+
+    /**
+     * Deep clone sceny GLTF — klonuje geometrię i materiały.
+     *
+     * @param {Object} source - Three.js Object3D
+     * @returns {Object} Sklonowany obiekt
+     * @private
+     */
+    _deepClone(source) {
+        const clone = source.clone(true);
+        clone.traverse((child) => {
+            if (child.isMesh) {
+                child.geometry = child.geometry.clone();
+                child.material = child.material.clone();
+            }
+        });
+        return clone;
     }
 
     /**

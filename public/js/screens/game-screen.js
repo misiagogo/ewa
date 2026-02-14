@@ -235,7 +235,7 @@ class GameScreen {
 
             // Dodaj brakujące komponenty do encji gracza
             this._world.addComponent(this._playerEntityId, new PlayerInput());
-            this._world.addComponent(this._playerEntityId, new CameraTarget(8, 5, 0.08));
+            this._world.addComponent(this._playerEntityId, new CameraTarget(3, 1.8, 0.08));
 
             // Załaduj początkowe chunki
             this._chunkManager.update(0, 0);
