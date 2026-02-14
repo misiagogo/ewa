@@ -46,6 +46,7 @@ class KeyboardHandler {
             right: this._anyPressed(km.right),
             rotateLeft: this._anyPressed(km.rotateLeft),
             rotateRight: this._anyPressed(km.rotateRight),
+            jump: this._anyPressed(km.jump),
         };
     }
 

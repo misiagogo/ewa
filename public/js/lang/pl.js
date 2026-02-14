@@ -60,6 +60,7 @@ registerTranslations('pl', {
     'screen.creator.pattern.patched': 'Łaciaty',
     'screen.creator.pattern.bicolor': 'Dwukolorowy',
     'screen.creator.eye_color': 'Kolor oczu',
+    'screen.creator.weight': 'Waga',
     'screen.creator.age': 'Wiek',
     'screen.creator.age.young': 'Młody',
     'screen.creator.age.adult': 'Dorosły',

@@ -17,6 +17,8 @@ class CatConfig {
     age;
     /** @type {string} */
     gender;
+    /** @type {number} Waga kota w kg (2-12) */
+    weight;
 
     /**
      * @param {Object} [config={}]
@@ -28,6 +30,7 @@ class CatConfig {
         this.eyeColor = config.eye_color || config.eyeColor || '#00cc44';
         this.age = config.age || 'adult';
         this.gender = config.gender || 'male';
+        this.weight = parseFloat(config.weight) || 4.5;
     }
 }
 

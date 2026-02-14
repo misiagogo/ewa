@@ -60,6 +60,7 @@ registerTranslations('en', {
     'screen.creator.pattern.patched': 'Patched',
     'screen.creator.pattern.bicolor': 'Bicolor',
     'screen.creator.eye_color': 'Eye color',
+    'screen.creator.weight': 'Weight',
     'screen.creator.age': 'Age',
     'screen.creator.age.young': 'Young',
     'screen.creator.age.adult': 'Adult',

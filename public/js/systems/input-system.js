@@ -62,6 +62,7 @@ class InputSystem {
             input.right = adapterInput.right;
             input.rotateLeft = adapterInput.rotateLeft;
             input.rotateRight = adapterInput.rotateRight;
+            input.jump = adapterInput.jump;
         }
     }
 }

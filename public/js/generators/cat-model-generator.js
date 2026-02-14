@@ -36,6 +36,7 @@ class CatModelGenerator {
         const furColor = config.furColor || config.fur_color || '#ff8800';
         const eyeColor = config.eyeColor || config.eye_color || '#00cc44';
         const pattern = config.pattern || 'solid';
+        const weight = parseFloat(config.weight) || 4.5;
 
         const furMat = this._getMaterial(furColor);
         const eyeMat = this._getMaterial(eyeColor);
@@ -48,30 +49,46 @@ class CatModelGenerator {
         // Skala wg wieku
         const ageScale = config.age === 'young' ? 0.7 : config.age === 'senior' ? 1.05 : 1.0;
 
+        // Wpływ wagi na proporcje (4.5 kg = normalne, 2 kg = chudy, 12 kg = gruby)
+        const wNorm = (weight - 2) / 10; // 0..1
+        const wFat = 0.85 + wNorm * 0.5;  // 0.85..1.35 — mnożnik grubości
+        const wLen = 0.95 + wNorm * 0.12;  // 0.95..1.07 — mnożnik długości
+        const wLeg = 1.0 - wNorm * 0.15;   // 1.0..0.85 — grube koty mają krótsze nogi
+        const wBelly = Math.max(0, wNorm - 0.5) * 0.4; // brzuszek widoczny od ~7 kg
+
         // ── CIAŁO (owalne, zaokrąglone) ──
         const bodyGeo = new THREE.SphereGeometry(1, 12, 10);
-        bodyGeo.scale(0.32, 0.28, 0.52);
+        bodyGeo.scale(0.32 * wFat, 0.28 * wFat, 0.52 * wLen);
         const body = new THREE.Mesh(bodyGeo, furMat);
         body.position.set(0, 0.38, 0);
         group.add(body);
 
         // Klatka piersiowa (lekko szersza z przodu)
         const chestGeo = new THREE.SphereGeometry(1, 10, 8);
-        chestGeo.scale(0.30, 0.27, 0.22);
+        chestGeo.scale(0.30 * wFat, 0.27 * wFat, 0.22 * wLen);
         const chest = new THREE.Mesh(chestGeo, furMat);
         chest.position.set(0, 0.40, 0.28);
         group.add(chest);
 
         // Biodra (lekko szersze z tyłu)
         const hipGeo = new THREE.SphereGeometry(1, 10, 8);
-        hipGeo.scale(0.28, 0.26, 0.20);
+        hipGeo.scale(0.28 * wFat, 0.26 * wFat, 0.20 * wLen);
         const hip = new THREE.Mesh(hipGeo, furMat);
         hip.position.set(0, 0.36, -0.30);
         group.add(hip);
 
-        // ── GŁOWA (zaokrąglona, lekko spłaszczona) ──
+        // Brzuszek (widoczny u grubszych kotów)
+        if (wBelly > 0.01) {
+            const bellyGeo = new THREE.SphereGeometry(1, 10, 8);
+            bellyGeo.scale(0.24 * wFat, 0.12 + wBelly, 0.36 * wLen);
+            const belly = new THREE.Mesh(bellyGeo, furMat);
+            belly.position.set(0, 0.22, -0.02);
+            group.add(belly);
+        }
+
+        // ── GŁOWA (zaokrąglona, lekko spłaszczona, szersza u grubych) ──
         const headGeo = new THREE.SphereGeometry(0.22, 12, 10);
-        headGeo.scale(1.0, 0.92, 0.88);
+        headGeo.scale(1.0 * (0.95 + wNorm * 0.15), 0.92, 0.88);
         const head = new THREE.Mesh(headGeo, furMat);
         head.position.set(0, 0.62, 0.48);
         group.add(head);
@@ -171,38 +188,48 @@ class CatModelGenerator {
             group.add(whisker);
         }
 
-        // ── ŁAPY (zaokrąglone, z poduszkami) ──
-        const legGeo = new THREE.CylinderGeometry(0.05, 0.06, 0.28, 8);
-        const pawGeo = new THREE.SphereGeometry(0.065, 8, 6);
-        pawGeo.scale(1.0, 0.5, 1.1);
+        // ── ŁAPY (zaokrąglone, z poduszkami, grubość zależy od wagi) ──
+        const legThick = 0.05 * wFat;
+        const pawSize = 0.065 * wFat;
 
         const legPositions = [
-            { x: -0.18, z: 0.22, front: true },
-            { x: 0.18, z: 0.22, front: true },
-            { x: -0.18, z: -0.25, front: false },
-            { x: 0.18, z: -0.25, front: false },
+            { x: -0.18 * wFat, z: 0.22, front: true, name: 'legFL' },
+            { x: 0.18 * wFat, z: 0.22, front: true, name: 'legFR' },
+            { x: -0.18 * wFat, z: -0.25, front: false, name: 'legBL' },
+            { x: 0.18 * wFat, z: -0.25, front: false, name: 'legBR' },
         ];
 
         for (const lp of legPositions) {
-            const legH = lp.front ? 0.28 : 0.26;
-            const leg = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.05, 0.055, legH, 8),
+            const legH = (lp.front ? 0.28 : 0.26) * wLeg;
+
+            // Grupa łapy (pivot do animacji)
+            const legGroup = new THREE.Group();
+            legGroup.position.set(lp.x, 0.28, lp.z);
+            legGroup.userData = { legName: lp.name };
+
+            // Noga (cylinder)
+            const legMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(legThick, legThick * 1.1, legH, 8),
                 furMat
             );
-            leg.position.set(lp.x, legH / 2, lp.z);
-            group.add(leg);
+            legMesh.position.set(0, -legH / 2, 0);
+            legGroup.add(legMesh);
 
             // Łapka (poduszka)
+            const pawGeo = new THREE.SphereGeometry(pawSize, 8, 6);
+            pawGeo.scale(1.0, 0.5, 1.1);
             const paw = new THREE.Mesh(pawGeo, furMat);
-            paw.position.set(lp.x, 0.02, lp.z + (lp.front ? 0.02 : -0.02));
-            group.add(paw);
+            paw.position.set(0, -legH + 0.02, lp.front ? 0.02 : -0.02);
+            legGroup.add(paw);
 
             // Poduszka łapy (spód)
             const padGeo = new THREE.SphereGeometry(0.04, 6, 4);
             padGeo.scale(1.0, 0.3, 1.0);
             const pad = new THREE.Mesh(padGeo, pawPadMat);
-            pad.position.set(lp.x, 0.005, lp.z);
-            group.add(pad);
+            pad.position.set(0, -legH, 0);
+            legGroup.add(pad);
+
+            group.add(legGroup);
         }
 
         // ── OGON (zakrzywiony z segmentów) ──

@@ -111,6 +111,10 @@ class CreatorScreen {
                                     <label class="game-label">${__('screen.creator.eye_color')}</label>
                                     <input type="color" id="cat-eye-color" class="form-control form-control-color game-input" value="#00cc44">
                                 </div>
+                                <div class="mb-2">
+                                    <label class="game-label">${__('screen.creator.weight')} <span id="weight-value" class="badge bg-dark">4.5 kg</span></label>
+                                    <input type="range" id="cat-weight" class="form-range" min="2" max="12" step="0.5" value="4.5">
+                                </div>
                                 <div class="row mb-2">
                                     <div class="col-6">
                                         <label class="game-label">${__('screen.creator.age')}</label>
@@ -227,6 +231,7 @@ class CreatorScreen {
             fur_color: document.getElementById('cat-fur-color')?.value || '#ff8800',
             pattern: document.getElementById('cat-pattern')?.value || 'solid',
             eye_color: document.getElementById('cat-eye-color')?.value || '#00cc44',
+            weight: parseFloat(document.getElementById('cat-weight')?.value) || 4.5,
             age: document.getElementById('cat-age')?.value || 'adult',
             gender: document.getElementById('cat-gender')?.value || 'male',
         };
@@ -268,13 +273,22 @@ class CreatorScreen {
      */
     _bindEvents() {
         // Live update podglądu przy zmianie parametrów
-        const updateFields = ['cat-fur-color', 'cat-pattern', 'cat-eye-color', 'cat-age', 'cat-gender'];
+        const updateFields = ['cat-fur-color', 'cat-pattern', 'cat-eye-color', 'cat-weight', 'cat-age', 'cat-gender'];
         for (const fieldId of updateFields) {
             const el = document.getElementById(fieldId);
             if (el) {
                 el.addEventListener('input', () => this._rebuildCatPreview());
                 el.addEventListener('change', () => this._rebuildCatPreview());
             }
+        }
+
+        // Live update etykiety wagi
+        const weightSlider = document.getElementById('cat-weight');
+        const weightLabel = document.getElementById('weight-value');
+        if (weightSlider && weightLabel) {
+            weightSlider.addEventListener('input', () => {
+                weightLabel.textContent = weightSlider.value + ' kg';
+            });
         }
 
         document.getElementById('creator-form').addEventListener('submit', (e) => {

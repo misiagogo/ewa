@@ -61,6 +61,7 @@ class InputAdapter {
             right: !!(kb.right || touch.right),
             rotateLeft: !!(kb.rotateLeft || touch.rotateLeft),
             rotateRight: !!(kb.rotateRight || touch.rotateRight),
+            jump: !!(kb.jump || touch.jump),
         };
     }
 

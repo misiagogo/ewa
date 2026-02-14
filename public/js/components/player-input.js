@@ -14,10 +14,12 @@ class PlayerInput {
     left = false;
     /** @type {boolean} */
     right = false;
-    /** @type {number} Obrót kamery (delta) */
+    /** @type {boolean} */
     rotateLeft = false;
     /** @type {boolean} */
     rotateRight = false;
+    /** @type {boolean} */
+    jump = false;
 
     constructor() {
         this.forward = false;
@@ -26,6 +28,7 @@ class PlayerInput {
         this.right = false;
         this.rotateLeft = false;
         this.rotateRight = false;
+        this.jump = false;
     }
 }
 

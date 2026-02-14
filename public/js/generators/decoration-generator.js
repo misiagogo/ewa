@@ -120,7 +120,7 @@ class DecorationGenerator {
         group.add(crown);
 
         group.position.set(x, y, z);
-        group.userData = { type: 'decoration', kind: 'tree' };
+        group.userData = { type: 'decoration', kind: 'tree', collider: true, colliderRadius: 0.3 };
 
         return group;
     }
@@ -142,7 +142,7 @@ class DecorationGenerator {
         const rock = new THREE.Mesh(geo, this._rockMat);
         rock.position.set(x, y + scale * 0.3, z);
         rock.rotation.set(rng() * Math.PI, rng() * Math.PI, 0);
-        rock.userData = { type: 'decoration', kind: 'rock' };
+        rock.userData = { type: 'decoration', kind: 'rock', collider: true, colliderRadius: scale * 0.6 };
 
         return rock;
     }

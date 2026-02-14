@@ -34,6 +34,7 @@ import ChunkSystem from '../systems/chunk-system.js';
 import CameraSystem from '../systems/camera-system.js';
 import AnimationSystem from '../systems/animation-system.js';
 import RenderSystem from '../systems/render-system.js';
+import CollisionSystem from '../systems/collision-system.js';
 
 class GameScreen {
     /** @type {Object} */
@@ -65,6 +66,9 @@ class GameScreen {
 
     /** @type {number|null} Player entity ID */
     _playerEntityId = null;
+
+    /** @type {import('../systems/movement-system.js').default|null} */
+    _movementSystem = null;
 
     /** @type {Function|null} */
     _onResize = null;
@@ -213,7 +217,9 @@ class GameScreen {
             this._inputSystem.init();
 
             this._world.addSystem(this._inputSystem);
-            this._world.addSystem(new MovementSystem());
+            this._movementSystem = new MovementSystem();
+            this._world.addSystem(this._movementSystem);
+            this._world.addSystem(new CollisionSystem(this._scene));
             this._world.addSystem(new ChunkSystem(this._chunkManager));
             this._world.addSystem(new CameraSystem(this._camera));
             this._world.addSystem(new AnimationSystem());
@@ -249,7 +255,7 @@ class GameScreen {
     }
 
     /**
-     * Aktualizuj wysokość gracza na terenie.
+     * Aktualizuj wysokość gracza na terenie — obsługa skoku i grawitacji.
      *
      * @private
      */
@@ -257,9 +263,23 @@ class GameScreen {
         if (!this._terrainGen || !this._playerEntityId || !this._world) return;
 
         const transform = this._world.getComponent(this._playerEntityId, Transform);
-        if (transform) {
-            const terrainY = this._terrainGen.getHeight(transform.x, transform.z);
-            transform.y = terrainY + 0.3;
+        const velocity = this._world.getComponent(this._playerEntityId, Velocity);
+        if (!transform || !velocity) return;
+
+        const terrainY = this._terrainGen.getHeight(transform.x, transform.z) + 0.3;
+
+        if (transform.y <= terrainY) {
+            // Na ziemi lub pod ziemią — ustaw na teren
+            transform.y = terrainY;
+            velocity.y = 0;
+            if (this._movementSystem) {
+                this._movementSystem.setGrounded(this._playerEntityId, true);
+            }
+        } else {
+            // W powietrzu (skok)
+            if (this._movementSystem) {
+                this._movementSystem.setGrounded(this._playerEntityId, false);
+            }
         }
     }
 
