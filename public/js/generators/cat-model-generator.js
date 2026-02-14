@@ -24,9 +24,16 @@ class CatModelGenerator {
     }
 
     /**
-     * Utwórz realistyczny model kota.
+     * Utwórz fotorealistyczny model kota.
      *
-     * @param {Object} config - { furColor, pattern, eyeColor, age, gender }
+     * Płeć, wiek i waga wpływają na proporcje:
+     * - Kocur: masywniejszy, szersza głowa, grubszy kark, większy pysk
+     * - Kotka: smuklejsza, delikatniejsza, mniejsza głowa
+     * - Młody: duża głowa/oczy, krótkie ciało, cienkie łapki, duże uszy
+     * - Dorosły: normalne proporcje
+     * - Senior: chudszy, dłuższy pysk, lekko obwisłe uszy, widoczne kości
+     *
+     * @param {Object} config - { furColor, pattern, eyeColor, age, gender, weight }
      * @returns {Object} Three.js Group
      */
     create(config = {}) {
@@ -37,6 +44,8 @@ class CatModelGenerator {
         const eyeColor = config.eyeColor || config.eye_color || '#00cc44';
         const pattern = config.pattern || 'solid';
         const weight = parseFloat(config.weight) || 4.5;
+        const gender = config.gender || 'male';
+        const age = config.age || 'adult';
 
         const furMat = this._getMaterial(furColor);
         const eyeMat = this._getMaterial(eyeColor);
@@ -45,141 +54,229 @@ class CatModelGenerator {
         const whiteMat = this._getMaterial('#f5f0e8');
         const innerEarMat = this._getMaterial(this._lightenColor(furColor, 1.3));
         const pawPadMat = this._getMaterial('#d4a0a0');
+        const gumMat = this._getMaterial('#c4737b');
 
-        // Skala wg wieku
-        const ageScale = config.age === 'young' ? 0.7 : config.age === 'senior' ? 1.05 : 1.0;
+        // ── MNOŻNIKI PŁCI ──
+        // Kocur: masywniejszy (+15% szerokość, +10% głowa, grubszy kark)
+        // Kotka: smuklejsza (-10% szerokość, -5% głowa, delikatniejsza)
+        const gW = gender === 'male' ? 1.12 : 0.90;   // szerokość ciała
+        const gH = gender === 'male' ? 1.05 : 0.97;   // wysokość ciała
+        const gHead = gender === 'male' ? 1.10 : 0.92; // rozmiar głowy
+        const gMuzzle = gender === 'male' ? 1.15 : 0.85; // rozmiar pyska
+        const gNeck = gender === 'male' ? 1.25 : 0.85; // grubość szyi/karku
+        const gEar = gender === 'male' ? 1.0 : 1.08;   // rozmiar uszu (kotki mają proporcjonalnie większe)
+        const gWhisker = gender === 'male' ? 1.1 : 0.9; // długość wąsów
+        const gOverall = gender === 'male' ? 1.05 : 0.95; // ogólna skala
 
-        // Wpływ wagi na proporcje (4.5 kg = normalne, 2 kg = chudy, 12 kg = gruby)
-        const wNorm = (weight - 2) / 10; // 0..1
-        const wFat = 0.85 + wNorm * 0.5;  // 0.85..1.35 — mnożnik grubości
-        const wLen = 0.95 + wNorm * 0.12;  // 0.95..1.07 — mnożnik długości
-        const wLeg = 1.0 - wNorm * 0.15;   // 1.0..0.85 — grube koty mają krótsze nogi
-        const wBelly = Math.max(0, wNorm - 0.5) * 0.4; // brzuszek widoczny od ~7 kg
+        // ── MNOŻNIKI WIEKU ──
+        // Młody: duża głowa/oczy, krótkie ciało, cienkie łapki
+        // Senior: chudszy, dłuższy pysk, kościsty
+        const aBody = age === 'young' ? 0.75 : age === 'senior' ? 0.92 : 1.0;
+        const aHead = age === 'young' ? 1.25 : age === 'senior' ? 0.95 : 1.0;
+        const aEye = age === 'young' ? 1.35 : age === 'senior' ? 0.90 : 1.0;
+        const aEar = age === 'young' ? 1.20 : age === 'senior' ? 1.05 : 1.0;
+        const aMuzzle = age === 'young' ? 0.75 : age === 'senior' ? 1.15 : 1.0;
+        const aLeg = age === 'young' ? 0.80 : age === 'senior' ? 0.90 : 1.0;
+        const aScale = age === 'young' ? 0.68 : age === 'senior' ? 1.02 : 1.0;
+        const aThin = age === 'senior' ? 0.85 : 1.0; // senior jest chudszy
+
+        // ── MNOŻNIKI WAGI ──
+        const wNorm = (weight - 2) / 10;
+        const wFat = 0.85 + wNorm * 0.5;
+        const wLen = 0.95 + wNorm * 0.12;
+        const wLeg = 1.0 - wNorm * 0.15;
+        const wBelly = Math.max(0, wNorm - 0.5) * 0.4;
 
         // ── CIAŁO (owalne, zaokrąglone) ──
-        const bodyGeo = new THREE.SphereGeometry(1, 12, 10);
-        bodyGeo.scale(0.32 * wFat, 0.28 * wFat, 0.52 * wLen);
+        const bodyGeo = new THREE.SphereGeometry(1, 16, 12);
+        bodyGeo.scale(0.32 * wFat * gW * aThin, 0.28 * wFat * gH, 0.52 * wLen * aBody);
         const body = new THREE.Mesh(bodyGeo, furMat);
         body.position.set(0, 0.38, 0);
         group.add(body);
 
-        // Klatka piersiowa (lekko szersza z przodu)
-        const chestGeo = new THREE.SphereGeometry(1, 10, 8);
-        chestGeo.scale(0.30 * wFat, 0.27 * wFat, 0.22 * wLen);
+        // Klatka piersiowa
+        const chestGeo = new THREE.SphereGeometry(1, 12, 10);
+        chestGeo.scale(0.30 * wFat * gW * aThin, 0.27 * wFat * gH, 0.22 * wLen * aBody);
         const chest = new THREE.Mesh(chestGeo, furMat);
-        chest.position.set(0, 0.40, 0.28);
+        chest.position.set(0, 0.40, 0.28 * aBody);
         group.add(chest);
 
-        // Biodra (lekko szersze z tyłu)
-        const hipGeo = new THREE.SphereGeometry(1, 10, 8);
-        hipGeo.scale(0.28 * wFat, 0.26 * wFat, 0.20 * wLen);
+        // Biodra
+        const hipGeo = new THREE.SphereGeometry(1, 12, 10);
+        hipGeo.scale(0.28 * wFat * gW * aThin, 0.26 * wFat * gH, 0.20 * wLen * aBody);
         const hip = new THREE.Mesh(hipGeo, furMat);
-        hip.position.set(0, 0.36, -0.30);
+        hip.position.set(0, 0.36, -0.30 * aBody);
         group.add(hip);
+
+        // Łopatki (widoczne u chudych/seniorów)
+        if (age === 'senior' || weight < 4) {
+            const shoulderGeo = new THREE.SphereGeometry(0.06, 6, 6);
+            shoulderGeo.scale(1.0, 0.6, 0.8);
+            const shoulderL = new THREE.Mesh(shoulderGeo, furMat);
+            shoulderL.position.set(-0.18, 0.50, 0.15);
+            group.add(shoulderL);
+            const shoulderR = new THREE.Mesh(shoulderGeo, furMat);
+            shoulderR.position.set(0.18, 0.50, 0.15);
+            group.add(shoulderR);
+        }
 
         // Brzuszek (widoczny u grubszych kotów)
         if (wBelly > 0.01) {
             const bellyGeo = new THREE.SphereGeometry(1, 10, 8);
-            bellyGeo.scale(0.24 * wFat, 0.12 + wBelly, 0.36 * wLen);
+            bellyGeo.scale(0.24 * wFat * gW, 0.12 + wBelly, 0.36 * wLen * aBody);
             const belly = new THREE.Mesh(bellyGeo, furMat);
             belly.position.set(0, 0.22, -0.02);
             group.add(belly);
         }
 
-        // ── GŁOWA (zaokrąglona, lekko spłaszczona, szersza u grubych) ──
-        const headGeo = new THREE.SphereGeometry(0.22, 12, 10);
-        headGeo.scale(1.0 * (0.95 + wNorm * 0.15), 0.92, 0.88);
+        // ── SZYJA / KARK ──
+        const neckGeo = new THREE.SphereGeometry(1, 10, 8);
+        neckGeo.scale(0.16 * gNeck * wFat, 0.14 * gH, 0.14);
+        const neck = new THREE.Mesh(neckGeo, furMat);
+        neck.position.set(0, 0.50, 0.36 * aBody);
+        group.add(neck);
+
+        // Kark (grubszy u kocurów — widoczny mięsień)
+        if (gender === 'male') {
+            const scruffGeo = new THREE.SphereGeometry(0.10, 8, 6);
+            scruffGeo.scale(1.2 * wFat, 0.8, 0.9);
+            const scruff = new THREE.Mesh(scruffGeo, furMat);
+            scruff.position.set(0, 0.54, 0.30 * aBody);
+            group.add(scruff);
+        }
+
+        // ── GŁOWA ──
+        const headR = 0.22 * gHead * aHead;
+        const headGeo = new THREE.SphereGeometry(headR, 16, 12);
+        headGeo.scale(1.0 * (0.95 + wNorm * 0.12), 0.92, 0.90);
         const head = new THREE.Mesh(headGeo, furMat);
-        head.position.set(0, 0.62, 0.48);
+        head.position.set(0, 0.62, 0.48 * aBody);
         group.add(head);
 
-        // Pysk (wypukłość)
-        const muzzleGeo = new THREE.SphereGeometry(0.10, 8, 8);
-        muzzleGeo.scale(0.8, 0.6, 0.7);
+        // Policzki (kocury mają szersze)
+        const cheekR = 0.08 * gHead * aHead;
+        const cheekGeo = new THREE.SphereGeometry(cheekR, 8, 6);
+        cheekGeo.scale(1.0, 0.75, 0.8);
+        const cheekL = new THREE.Mesh(cheekGeo, furMat);
+        cheekL.position.set(-0.14 * gHead, 0.58, 0.55 * aBody);
+        group.add(cheekL);
+        const cheekR2 = new THREE.Mesh(cheekGeo, furMat);
+        cheekR2.position.set(0.14 * gHead, 0.58, 0.55 * aBody);
+        group.add(cheekR2);
+
+        // Pysk (kocur: szerszy/masywniejszy, kotka: delikatniejszy, senior: dłuższy)
+        const muzzleGeo = new THREE.SphereGeometry(0.10 * gMuzzle * aMuzzle, 10, 8);
+        muzzleGeo.scale(0.8, 0.6, 0.7 * aMuzzle);
         const muzzle = new THREE.Mesh(muzzleGeo, furMat);
-        muzzle.position.set(0, 0.56, 0.66);
+        muzzle.position.set(0, 0.56, (0.66 + (aMuzzle - 1) * 0.04) * aBody);
         group.add(muzzle);
 
-        // Podbródek (biały u dołu pyska)
-        const chinGeo = new THREE.SphereGeometry(0.06, 6, 6);
+        // Podbródek
+        const chinGeo = new THREE.SphereGeometry(0.05 * gMuzzle, 6, 6);
         const chin = new THREE.Mesh(chinGeo, whiteMat);
-        chin.position.set(0, 0.52, 0.65);
+        chin.position.set(0, 0.52, 0.65 * aBody);
         group.add(chin);
 
-        // ── USZY (trójkątne, z wnętrzem) ──
-        const earGeo = new THREE.ConeGeometry(0.065, 0.16, 4);
-        const innerEarGeo = new THREE.ConeGeometry(0.04, 0.12, 4);
+        // Brwi (lekkie wypukłości nad oczami)
+        const browGeo = new THREE.SphereGeometry(0.035, 6, 4);
+        browGeo.scale(1.5, 0.5, 0.8);
+        const browL = new THREE.Mesh(browGeo, furMat);
+        browL.position.set(-0.08 * gHead, 0.70 * aHead, 0.60 * aBody);
+        group.add(browL);
+        const browR = new THREE.Mesh(browGeo, furMat);
+        browR.position.set(0.08 * gHead, 0.70 * aHead, 0.60 * aBody);
+        group.add(browR);
+
+        // ── USZY (rozmiar zależy od płci i wieku) ──
+        const earH = 0.16 * gEar * aEar;
+        const earR2 = 0.065 * gEar * aEar;
+        const earGeo = new THREE.ConeGeometry(earR2, earH, 4);
+        const innerEarH = earH * 0.75;
+        const innerEarR = earR2 * 0.6;
+        const innerEarGeo = new THREE.ConeGeometry(innerEarR, innerEarH, 4);
+
+        // Pozycja uszu (młode: wyżej i bardziej na boki, senior: lekko obwisłe)
+        const earY = age === 'young' ? 0.88 : age === 'senior' ? 0.80 : 0.84;
+        const earSpread = age === 'young' ? 0.15 : 0.13;
+        const earDroop = age === 'senior' ? -0.25 : -0.15; // senior: bardziej obwisłe
 
         const earL = new THREE.Mesh(earGeo, furMat);
-        earL.position.set(-0.13, 0.84, 0.48);
-        earL.rotation.set(-0.15, 0, -0.15);
+        earL.position.set(-earSpread * gHead, earY * aHead, 0.48 * aBody);
+        earL.rotation.set(earDroop, 0, -0.15);
         group.add(earL);
 
         const earLInner = new THREE.Mesh(innerEarGeo, innerEarMat);
-        earLInner.position.set(-0.13, 0.84, 0.50);
-        earLInner.rotation.set(-0.15, 0, -0.15);
+        earLInner.position.set(-earSpread * gHead, earY * aHead, (0.48 + 0.02) * aBody);
+        earLInner.rotation.set(earDroop, 0, -0.15);
         group.add(earLInner);
 
-        const earR = new THREE.Mesh(earGeo, furMat);
-        earR.position.set(0.13, 0.84, 0.48);
-        earR.rotation.set(-0.15, 0, 0.15);
-        group.add(earR);
+        const earRMesh = new THREE.Mesh(earGeo, furMat);
+        earRMesh.position.set(earSpread * gHead, earY * aHead, 0.48 * aBody);
+        earRMesh.rotation.set(earDroop, 0, 0.15);
+        group.add(earRMesh);
 
         const earRInner = new THREE.Mesh(innerEarGeo, innerEarMat);
-        earRInner.position.set(0.13, 0.84, 0.50);
-        earRInner.rotation.set(-0.15, 0, 0.15);
+        earRInner.position.set(earSpread * gHead, earY * aHead, (0.48 + 0.02) * aBody);
+        earRInner.rotation.set(earDroop, 0, 0.15);
         group.add(earRInner);
 
-        // ── OCZY (realistyczne: białko + tęczówka + źrenica) ──
-        const eyeWhiteGeo = new THREE.SphereGeometry(0.048, 10, 8);
+        // ── OCZY (rozmiar zależy od wieku — młode mają duże oczy) ──
+        const eyeS = aEye;
+        const eyeWhiteGeo = new THREE.SphereGeometry(0.048 * eyeS, 12, 10);
         eyeWhiteGeo.scale(1.0, 0.85, 0.6);
-        const irisGeo = new THREE.SphereGeometry(0.032, 8, 8);
-        const pupilGeo = new THREE.SphereGeometry(0.016, 6, 6);
+        const irisGeo = new THREE.SphereGeometry(0.032 * eyeS, 10, 8);
+        const pupilGeo = new THREE.SphereGeometry(0.016 * eyeS, 8, 6);
         pupilGeo.scale(1.0, 1.8, 1.0);
 
-        // Lewe oko
+        const eyeSpread = 0.09 * gHead * aHead;
+        const eyeY = 0.65 * aHead;
+        const eyeZ = 0.65 * aBody;
+
         const eyeWhiteL = new THREE.Mesh(eyeWhiteGeo, whiteMat);
-        eyeWhiteL.position.set(-0.09, 0.65, 0.65);
+        eyeWhiteL.position.set(-eyeSpread, eyeY, eyeZ);
         group.add(eyeWhiteL);
-
         const irisL = new THREE.Mesh(irisGeo, eyeMat);
-        irisL.position.set(-0.09, 0.65, 0.69);
+        irisL.position.set(-eyeSpread, eyeY, eyeZ + 0.04);
         group.add(irisL);
-
         const pupilL = new THREE.Mesh(pupilGeo, darkMat);
-        pupilL.position.set(-0.09, 0.65, 0.71);
+        pupilL.position.set(-eyeSpread, eyeY, eyeZ + 0.06);
         group.add(pupilL);
 
-        // Prawe oko
         const eyeWhiteR = new THREE.Mesh(eyeWhiteGeo, whiteMat);
-        eyeWhiteR.position.set(0.09, 0.65, 0.65);
+        eyeWhiteR.position.set(eyeSpread, eyeY, eyeZ);
         group.add(eyeWhiteR);
-
         const irisR = new THREE.Mesh(irisGeo, eyeMat);
-        irisR.position.set(0.09, 0.65, 0.69);
+        irisR.position.set(eyeSpread, eyeY, eyeZ + 0.04);
         group.add(irisR);
-
         const pupilR = new THREE.Mesh(pupilGeo, darkMat);
-        pupilR.position.set(0.09, 0.65, 0.71);
+        pupilR.position.set(eyeSpread, eyeY, eyeZ + 0.06);
         group.add(pupilR);
 
-        // ── NOS ──
-        const noseGeo = new THREE.SphereGeometry(0.025, 6, 6);
+        // ── NOS (rozmiar zależy od pyska) ──
+        const noseGeo = new THREE.SphereGeometry(0.025 * gMuzzle * aMuzzle, 8, 6);
         noseGeo.scale(1.2, 0.8, 0.8);
         const nose = new THREE.Mesh(noseGeo, noseMat);
-        nose.position.set(0, 0.585, 0.72);
+        nose.position.set(0, 0.585, (0.72 + (aMuzzle - 1) * 0.03) * aBody);
         group.add(nose);
 
-        // ── WĄSY (cienkie cylindry) ──
+        // Usta (linia pod nosem)
+        const mouthGeo = new THREE.CylinderGeometry(0.002, 0.002, 0.03, 3);
+        const mouth = new THREE.Mesh(mouthGeo, gumMat);
+        mouth.position.set(0, 0.565, (0.73 + (aMuzzle - 1) * 0.03) * aBody);
+        group.add(mouth);
+
+        // ── WĄSY (długość zależy od płci) ──
         const whiskerMat = this._getMaterial('#cccccc');
-        const whiskerGeo = new THREE.CylinderGeometry(0.003, 0.002, 0.18, 3);
+        const whiskerLen = 0.18 * gWhisker;
+        const whiskerGeo = new THREE.CylinderGeometry(0.003, 0.002, whiskerLen, 3);
+        const wZ = (0.70 + (aMuzzle - 1) * 0.02) * aBody;
         const whiskerPositions = [
-            { x: -0.06, y: 0.565, z: 0.70, rz: 0.1, ry: 0.3 },
-            { x: -0.06, y: 0.555, z: 0.70, rz: 0.0, ry: 0.3 },
-            { x: -0.06, y: 0.545, z: 0.70, rz: -0.1, ry: 0.3 },
-            { x: 0.06, y: 0.565, z: 0.70, rz: 0.1, ry: -0.3 },
-            { x: 0.06, y: 0.555, z: 0.70, rz: 0.0, ry: -0.3 },
-            { x: 0.06, y: 0.545, z: 0.70, rz: -0.1, ry: -0.3 },
+            { x: -0.06, y: 0.565, z: wZ, rz: 0.1, ry: 0.3 },
+            { x: -0.06, y: 0.555, z: wZ, rz: 0.0, ry: 0.3 },
+            { x: -0.06, y: 0.545, z: wZ, rz: -0.1, ry: 0.3 },
+            { x: 0.06, y: 0.565, z: wZ, rz: 0.1, ry: -0.3 },
+            { x: 0.06, y: 0.555, z: wZ, rz: 0.0, ry: -0.3 },
+            { x: 0.06, y: 0.545, z: wZ, rz: -0.1, ry: -0.3 },
         ];
         for (const w of whiskerPositions) {
             const whisker = new THREE.Mesh(whiskerGeo, whiskerMat);
@@ -188,41 +285,49 @@ class CatModelGenerator {
             group.add(whisker);
         }
 
-        // ── ŁAPY (zaokrąglone, z poduszkami, grubość zależy od wagi) ──
-        const legThick = 0.05 * wFat;
-        const pawSize = 0.065 * wFat;
+        // ── ŁAPY (grubość zależy od wagi, długość od wieku) ──
+        const legThick = 0.05 * wFat * gW * aLeg;
+        const pawSize = 0.065 * wFat * aLeg;
 
         const legPositions = [
-            { x: -0.18 * wFat, z: 0.22, front: true, name: 'legFL' },
-            { x: 0.18 * wFat, z: 0.22, front: true, name: 'legFR' },
-            { x: -0.18 * wFat, z: -0.25, front: false, name: 'legBL' },
-            { x: 0.18 * wFat, z: -0.25, front: false, name: 'legBR' },
+            { x: -0.18 * wFat * gW, z: 0.22 * aBody, front: true, name: 'legFL' },
+            { x: 0.18 * wFat * gW, z: 0.22 * aBody, front: true, name: 'legFR' },
+            { x: -0.18 * wFat * gW, z: -0.25 * aBody, front: false, name: 'legBL' },
+            { x: 0.18 * wFat * gW, z: -0.25 * aBody, front: false, name: 'legBR' },
         ];
 
         for (const lp of legPositions) {
-            const legH = (lp.front ? 0.28 : 0.26) * wLeg;
+            const legH = (lp.front ? 0.28 : 0.26) * wLeg * aLeg;
 
-            // Grupa łapy (pivot do animacji)
             const legGroup = new THREE.Group();
             legGroup.position.set(lp.x, 0.28, lp.z);
             legGroup.userData = { legName: lp.name };
 
-            // Noga (cylinder)
+            // Noga — młode: cieńsze, senior: kościste
+            const lt = age === 'young' ? legThick * 0.8 : legThick;
             const legMesh = new THREE.Mesh(
-                new THREE.CylinderGeometry(legThick, legThick * 1.1, legH, 8),
+                new THREE.CylinderGeometry(lt, lt * 1.1, legH, 8),
                 furMat
             );
             legMesh.position.set(0, -legH / 2, 0);
             legGroup.add(legMesh);
 
-            // Łapka (poduszka)
+            // Staw (kolano/łokieć — widoczny u seniorów)
+            if (age === 'senior') {
+                const jointGeo = new THREE.SphereGeometry(lt * 1.3, 6, 4);
+                const joint = new THREE.Mesh(jointGeo, furMat);
+                joint.position.set(0, -legH * 0.4, lp.front ? 0.02 : -0.02);
+                legGroup.add(joint);
+            }
+
+            // Łapka
             const pawGeo = new THREE.SphereGeometry(pawSize, 8, 6);
             pawGeo.scale(1.0, 0.5, 1.1);
             const paw = new THREE.Mesh(pawGeo, furMat);
             paw.position.set(0, -legH + 0.02, lp.front ? 0.02 : -0.02);
             legGroup.add(paw);
 
-            // Poduszka łapy (spód)
+            // Poduszka łapy
             const padGeo = new THREE.SphereGeometry(0.04, 6, 4);
             padGeo.scale(1.0, 0.3, 1.0);
             const pad = new THREE.Mesh(padGeo, pawPadMat);
@@ -233,12 +338,14 @@ class CatModelGenerator {
         }
 
         // ── OGON (zakrzywiony z segmentów) ──
-        this._buildTail(group, furMat);
+        this._buildTail(group, furMat, aBody, gW);
 
         // ── WZORY FUTRA ──
         this._applyPattern(group, pattern, furColor, furMat);
 
-        group.scale.set(ageScale, ageScale, ageScale);
+        // Skala końcowa: wiek + płeć
+        const finalScale = aScale * gOverall;
+        group.scale.set(finalScale, finalScale, finalScale);
         group.userData = { type: 'cat' };
 
         return group;
@@ -249,26 +356,27 @@ class CatModelGenerator {
      *
      * @param {Object} group
      * @param {Object} furMat
+     * @param {number} [aBody=1] - mnożnik długości ciała (wiek)
+     * @param {number} [gW=1] - mnożnik szerokości (płeć)
      * @private
      */
-    _buildTail(group, furMat) {
+    _buildTail(group, furMat, aBody = 1, gW = 1) {
         const THREE = this._THREE;
-        const segments = 6;
+        const segments = 7;
         const segLen = 0.10;
-        let x = 0, y = 0.42, z = -0.50;
+        let x = 0, y = 0.42, z = -0.50 * aBody;
         let angle = -0.6;
 
         for (let i = 0; i < segments; i++) {
-            const radius = 0.04 - i * 0.004;
-            const geo = new THREE.SphereGeometry(Math.max(radius, 0.015), 6, 6);
+            const radius = (0.04 - i * 0.004) * gW;
+            const geo = new THREE.SphereGeometry(Math.max(radius, 0.012), 6, 6);
             geo.scale(1.0, 1.0, 1.8);
             const seg = new THREE.Mesh(geo, furMat);
             seg.position.set(x, y, z);
             seg.userData = { tailSegment: i };
             group.add(seg);
 
-            // Zakrzywienie ogona do góry
-            angle += 0.18;
+            angle += 0.16;
             z -= Math.cos(angle) * segLen;
             y += Math.sin(angle) * segLen;
         }
